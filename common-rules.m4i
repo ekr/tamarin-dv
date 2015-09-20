@@ -1,0 +1,26 @@
+/* Copied from Sam and Thyla's TLS 1.3 model */
+
+/*
+*/
+rule Register_pk:
+  [ Fr(~ltkA) ]--[ GenLtk($A, ~ltkA)
+  ]->
+  [ !Ltk($A, ~ltkA), !Pk($A, pk(~ltkA)), Out(pk(~ltkA)) ]
+
+rule Reveal_Ltk:
+  [ !Ltk($A, ~ltkA) ] --[ RevLtk($A) ]-> [ Out(~ltkA) ]
+
+/* Generate one long-term key per actor */
+axiom one_ltk:
+  "All A x y #i #j.
+    GenLtk(A, x)@i & GenLtk(A, y)@j ==> #i = #j"
+
+/* Any given client only tries to issue once */
+axiom one_issuance_request:
+  "All A #i #j.
+    ClientRequested(A)@i & ClientRequested(A)@j ==> #i = #j"
+
+/* Explicit equality checking */
+axiom Eq_check_succeed: "All x y #i. Eq(x,y) @ i ==> x = y"
+axiom Neq_check_succeed: "All x y #i. Neq(x,y) @ i ==> not (x = y)"
+
