@@ -2,6 +2,8 @@ DEPS= $(wildcard *.m4i)
 M4= $(patsubst %.m4,%.spthy,$(wildcard *.m4))
 PROOFS= $(patsubst %.m4,%.proof,$(wildcard *.m4))
 
+.PRECIOUS: %.spthy
+
 all: proofs
 
 proofs: $(PROOFS)
