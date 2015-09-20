@@ -21,29 +21,29 @@ builtins: hashing, symmetric-encryption, asymmetric-encryption, signing
 functions: h/1, pk/1
 
 rule Client_RequestIssuance:
-   [ !Ltk($A, ~ltkA) ]
-   --[ClientRequested($A)]->
-   [ StoredRequest($A), RequestIssuance($A) ]
+   [ !Ltk($A, ~ltkA), Fr(~authkey) ]
+   --[ClientRequested($A, ~authkey)]->
+   [ StoredRequest($A, ~authkey), RequestIssuance($A, ~authkey) ]
 
 rule Attacker_RequestIssuance:
-   [ ]
+   [ Fr(~authkey) ]
    -->
-   [ RequestIssuance($A) ]
+   [ RequestIssuance($A, ~authkey) ]
 
 rule Server_HandleIssuanceRequest:
-   [ RequestIssuance(name), Fr(~token)]
-   --[ IssuedChallenge(~token, name) ]->
-   [ StoredToken(~token, name),
+   [ RequestIssuance(name, authkey), Fr(~token)]
+   --[ IssuedChallenge(~token, name, authkey) ]->
+   [ StoredToken(~token, name, authkey),
      AuthenticMessage(<~token, name>),
      Out(~token)
    ]
 
 rule Client_RespondToChallenge:
    [ !Ltk($A, ltkA),
-     StoredRequest(expectedname),
+     StoredRequest(expectedname, authkey),
      AuthenticMessage(<challenge, name>) ]
    --[ Eq(expectedname, name),
-       ReceivedChallenge(challenge, name) ]->
+       ReceivedChallenge(challenge, name, authkey) ]->
      [ Out( <
              name,
              sign{<challenge, name>}ltkA
@@ -51,14 +51,14 @@ rule Client_RespondToChallenge:
      ]
 
 rule Server_HandleChallengeResponse:
-   [ StoredToken(challenge, name),
+   [ StoredToken(challenge, name, authkey),
      In (<claimed_name, signature>),
      !Pk(name, pkA)
    ]
    --[ Eq(claimed_name, name),
        Eq(verify(signature,
           <challenge, name>, pkA), true),
-      ChallengeSucceeded(challenge, name)]->
+      ChallengeSucceeded(challenge, name, authkey)]->
    []
 
 include(common-rules.m4i)

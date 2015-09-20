@@ -1,26 +1,26 @@
 /* Security properties for all our models */
 lemma Honest_trace:
    exists-trace
-   " Ex C N #h #i #j #k.
-      ClientRequested(N) @ #h &
-      IssuedChallenge(C, N) @ #i &
-      ReceivedChallenge(C, N) @ #j &
-      ChallengeSucceeded(C, N) @ #k &
+   " Ex C N A #h #i #j #k.
+      ClientRequested(N, A) @ #h &
+      IssuedChallenge(C, N, A) @ #i &
+      ReceivedChallenge(C, N, A) @ #j &
+      ChallengeSucceeded(C, N, A) @ #k &
       #h < #i &
       #i < #j &
       #j < #k
    "
 
 lemma No_attacker_without_Initiation:
-   "All C N #j.
-        ChallengeSucceeded(C, N) @j &
-        not (Ex #r. ClientRequested(N) @r)
+   "All C N A #j.
+        ChallengeSucceeded(C, N, A) @j &
+        not (Ex #r. ClientRequested(N, A) @r)
         ==> (Ex #s. RevLtk(N) @s)
    "
 
 lemma No_attacker_without_CR:
-   "All C N #j.
-        ChallengeSucceeded(C, N) @j &
-        not (Ex #r. ReceivedChallenge(C, N) @r)
+   "All C N A #j.
+        ChallengeSucceeded(C, N, A) @j &
+        not (Ex #r. ReceivedChallenge(C, N, A) @r)
         ==> (Ex #s. RevLtk(N) @s)
    "
