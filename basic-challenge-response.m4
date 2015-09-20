@@ -1,3 +1,19 @@
+/*
+    Trivial model of challenge/response-based domain validation.
+
+    The basic model here is as follows:
+
+    Client                                      Server (CA)
+    
+    name  ------------------------------------------------>   [Client_RequestIssuance]
+    <------------------------------------------ token, name   [Server_HandleIssuanceRequest]
+    sign(token, name) ------------------------------------>   [Client_RespondToChallenge]
+                                                              [Server_HandleChallengeResponse]
+
+    The signature isn't really part of the protocol but rather is
+    used to enforce the fact that only the legitimate domain-holder
+    can enforce the challenge.
+ */
 theory BasicChallengeResponse
 begin
 
