@@ -3,17 +3,17 @@
 
     The basic model here is as follows:
 
-    Client                                      Server (CA)
+    Client                                      CA (CA)
 >    name  ------------------------------------------------>   [Client_RequestIssuance]
-    <------------------------------------------ token, name   [Server_HandleIssuanceRequest]
+    <------------------------------------------ token, name   [CA_HandleIssuanceRequest]
     sign(token, name) ------------------------------------>   [Client_RespondToChallenge]
-                                                              [Server_HandleChallengeResponse]
+                                                              [CA_HandleChallengeResponse]
 
     The signature isn't really part of the protocol but rather is
     used to enforce the fact that only the legitimate domain-holder
     can enforce the challenge.
 
-    The output of all this is an "action" on the server (CA) side
+    The output of all this is an "action" on the CA (CA) side
     binding the name ($A) to an authkey (a standin for the account
     key).
 */
@@ -23,56 +23,78 @@ begin
 builtins: hashing, symmetric-encryption, asymmetric-encryption, signing
 functions: h/1, pk/1
 
+rule CA_Setup:
+   [ !Ltk('CA', ~ltkCA) ]
+   -->
+   []
+
 /* Issue a request for a given name ($A) */
 rule Client_RequestIssuance:
    [ !Ltk($A, ~ltkA),                   // Generate the key pair we will use to authenticate (as above).
      Fr(~authkeyPriv)
    ]                     // Generate a fresh authkey
-   --[ClientRequested($A, pk(~authkeyPriv))]->  // Record that we made the request
-   [ StoredRequest($A, pk(~authkeyPriv)),       // Store the (name, state) binding locally
-     RequestIssuance($A, pk(~authkeyPriv)) ]    // Output (name, state) so that it can be consumed by the server
+   --[ClientRequested('CA', $A, pk(~authkeyPriv))]->  // Record that we made the request
+   [ StoredRequest('CA', $A, pk(~authkeyPriv)),       // Store the (name, state) binding locally
+     RequestIssuance($A, pk(~authkeyPriv)) ]    // Output (name, state) so that it can be consumed by the CA
 
 /* Allow the attacker to request issuance */
 rule Attacker_RequestIssuance:
    [ Fr(~authkey) ]
-   -->
+   --[Attacker_RequestIssuance(~authkey)]->
    [ RequestIssuance($A, ~authkey) ]
 
-/* Have the server handle the request for issuance */
-rule Server_HandleIssuanceRequest:
+/* Have the CA handle the request for issuance */
+
+
+rule CA_HandleIssuanceRequest:
+   let
+        challengemessage = <name, ~token, authkey>
+   in
+     
    [ RequestIssuance(name, authkey),     // Take in a the request for issuance.
-     Fr(~token)]                         // Generate a fresh token to use as a challenge
+     Fr(~token),                         // Generate a fresh token to use as a challenge
+     !Ltk('CA', ltkCA)]
   --[ IssuedChallenge(~token, name, authkey) ]->  // Record that we issued the challenge
     [ StoredToken(~token, name, authkey),// Store the challenge we issued.
-     AuthenticMessage(<~token, name, authkey>), // Send out the challenge
-     Out(<~token, name>)                        // publish the challenge so it is known
+     Out(<
+         challengemessage,
+         sign { challengemessage } ltkCA
+         >
+     )
    ]
 
 /* Have the client respond to the challenge. */
 rule Client_RespondToChallenge:
-   [ !Ltk($A, ltkA),                    
-     StoredRequest(expectedname, authkeyPub),
-     AuthenticMessage(<challenge, name, authkey2>)  // Read in server request
+   let
+        challengemessage = <name, token, authkey>
+   in
+
+   [ 
+     StoredRequest(ca, expectedname, authkeyPub),
+     In(<challengemessage, signature>),
+     !Pk(ca, pkCA),
+     !Ltk($A, ltkA)
    ] 
    --[ Eq(expectedname, name),
-       Eq(authkeyPub, authkey2),
-       ReceivedChallenge(challenge, name, authkeyPub) ]->
+       Eq(authkeyPub, authkey),
+       Eq(verify(signature, challengemessage, pkCA), true),
+       ReceivedChallenge(ca, token, name, authkeyPub) ]->
      [ Out( <                                       // Emit a "signed" challenge.
              name,
-             sign{<challenge, name>}ltkA
+             sign{<token, name>}ltkA
             >)
      ]
 
-/* Have the server process the response. */
-rule Server_HandleChallengeResponse:
+/* Have the CA process the response. */
+rule CA_HandleChallengeResponse:
    [ StoredToken(challenge, name, authkey),
      In (<claimed_name, signature>),                // Read the signed challenge.
-     !Pk(name, pkA)                                 // Recover the doamain key.
+     !Pk(name, pkA)                                 // Recover the domain key.
    ]
    --[ Eq(claimed_name, name),
        Eq(verify(signature,
           <challenge, name>, pkA), true),
-      ChallengeSucceeded(challenge, name, authkey)]-> // Record success.
+      ChallengeSucceeded('CA', challenge, name, authkey)]-> // Record success.
    []
 
 include(common-rules.m4i)
