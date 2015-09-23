@@ -34,15 +34,16 @@ rule Server_HandleIssuanceRequest:
    [ RequestIssuance(name, authkey), Fr(~token)]
    --[ IssuedChallenge(~token, name, authkey) ]->
    [ StoredToken(~token, name, authkey),
-     AuthenticMessage(<~token, name>),
+     AuthenticMessage(<~token, name, authkey>),
      Out(~token)
    ]
 
 rule Client_RespondToChallenge:
    [ !Ltk($A, ltkA),
      StoredRequest(expectedname, authkey),
-     AuthenticMessage(<challenge, name>) ]
+     AuthenticMessage(<challenge, name, authkey2>) ]
    --[ Eq(expectedname, name),
+       Eq(authkey, authkey2),
        ReceivedChallenge(challenge, name, authkey) ]->
      [ Out( <
              name,
