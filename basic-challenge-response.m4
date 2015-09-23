@@ -26,10 +26,11 @@ functions: h/1, pk/1
 /* Issue a request for a given name ($A) */
 rule Client_RequestIssuance:
    [ !Ltk($A, ~ltkA),                   // Generate the key pair we will use to authenticate (as above).
-     Fr(~authkey) ]                     // Generate a fresh authkey
-   --[ClientRequested($A, ~authkey)]->  // Record that we made the request
-   [ StoredRequest($A, ~authkey),       // Store the (name, state) binding locally
-     RequestIssuance($A, ~authkey) ]    // Output (name, state) so that it can be consumed by the server
+     Fr(~authkeyPriv)
+   ]                     // Generate a fresh authkey
+   --[ClientRequested($A, pk(~authkeyPriv))]->  // Record that we made the request
+   [ StoredRequest($A, pk(~authkeyPriv)),       // Store the (name, state) binding locally
+     RequestIssuance($A, pk(~authkeyPriv)) ]    // Output (name, state) so that it can be consumed by the server
 
 /* Allow the attacker to request issuance */
 rule Attacker_RequestIssuance:
@@ -50,12 +51,12 @@ rule Server_HandleIssuanceRequest:
 /* Have the client respond to the challenge. */
 rule Client_RespondToChallenge:
    [ !Ltk($A, ltkA),                    
-     StoredRequest(expectedname, authkey),
+     StoredRequest(expectedname, authkeyPub),
      AuthenticMessage(<challenge, name, authkey2>)  // Read in server request
    ] 
    --[ Eq(expectedname, name),
-       Eq(authkey, authkey2),
-       ReceivedChallenge(challenge, name, authkey) ]->
+       Eq(authkeyPub, authkey2),
+       ReceivedChallenge(challenge, name, authkeyPub) ]->
      [ Out( <                                       // Emit a "signed" challenge.
              name,
              sign{<challenge, name>}ltkA
