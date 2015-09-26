@@ -20,16 +20,6 @@
 theory BasicChallengeResponse
 begin
 
-builtins: hashing, symmetric-encryption, asymmetric-encryption, signing
-functions: h/1, pk/1
-
-/* Conventions:
-
-   kFoo means that Foo is something we actually know
-   cFoo means that Foo is something that is claimed. 
-   AFoo_Bar is an action that Foo did Bar.
-*/
-
 include(common-setup.m4i)
 
 /* Have the client respond to the challenge. */
@@ -39,15 +29,15 @@ rule Client_FulfillChallenge:
    in
 
    [ 
-     StoredRequest(kCaName, kClientName, kAuthkeyPub),
+     StoredRequest(kCaName, kClientName, kAuthkeyPriv),
      In(<challengeMessage, signature>),
      !Pk(kCaName, kPkCA),
      !Ltk($Client, kLtkClient)
    ] 
    --[ Eq(cClientName, kClientName),
-       Eq(cAuthkeyPub, kAuthkeyPub),
+       Eq(cAuthkeyPub, pk(kAuthkeyPriv)),
        Eq(verify(signature, challengeMessage, kPkCA), true),
-       AClient_FulfilledChallenge(kCaName, cToken, kClientName, kAuthkeyPub) ]->
+       AClient_FulfilledChallenge(kCaName, cToken, kClientName, pk(kAuthkeyPriv)) ]->
      [ Out( <                                       // Emit a "signed" challenge.
              kClientName,
              sign{<cToken, kClientName>}kLtkClient

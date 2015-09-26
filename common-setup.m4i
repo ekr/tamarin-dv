@@ -1,3 +1,8 @@
+builtins: hashing, symmetric-encryption, asymmetric-encryption, signing
+functions: h/1, pk/1, fakekey/1
+equations:
+    verify(sig, msg, pk(fakekey(sig))) = true
+
 /* Issue the signing key for the CA */
 rule CA_Setup:
    [ !Ltk('CA', ~vLtkCA) ]
@@ -10,15 +15,15 @@ rule Client_RequestIssuance:
      Fr(~kAuthkeyPriv)
    ]                     // Generate a fresh authkey
    --[AClient_RequestedIssuance('CA', $Client, pk(~kAuthkeyPriv))]->  // Record that we made the request
-   [ StoredRequest('CA', $Client, pk(~kAuthkeyPriv)),       // Store the (name, state) binding locally
+   [ StoredRequest('CA', $Client, ~kAuthkeyPriv),       // Store the (name, state) binding locally
      RequestIssuance($Client, pk(~kAuthkeyPriv)) ]    // Output (name, state) so that it can be consumed by the CA
 
 
 /* Allow the attacker to request issuance */
 rule Attacker_RequestIssuance:
-   [ Fr(~kAuthkeyPriv) ]
-   --[AAttacker_RequestedIssuance(pk(~kAuthkeyPriv))]->
-   [ RequestIssuance($Client, pk(~kAuthkeyPriv)) ]
+   [ In(kAuthkeyPriv) ]
+   --[AAttacker_RequestedIssuance(pk(kAuthkeyPriv))]->
+   [ RequestIssuance($Client, pk(kAuthkeyPriv)) ]
 
 
 /* Have the CA handle the request for issuance */
