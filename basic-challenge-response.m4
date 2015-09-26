@@ -94,14 +94,15 @@ rule Client_RespondToChallenge:
 
 /* Have the CA process the response. */
 rule CA_HandleChallengeResponse:
-   [ StoredToken(token, challengedName, authkeyPub),
-     In (<requestedName, signature>),                // Read the signed challenge.
-     !Pk(challengedName, pkClient)                                 // Recover the domain key.
+   [ StoredToken(kToken, cRequestedName, cAuthkeyPub),  // These are marked as 'c' because haven't
+                                                      // verified them.
+     In (<cRespondedName, signature>),                // Read the signed challenge.
+     !Pk(cRespondedName, kPkClient)                   // Recover the domain key.
    ]
-   --[ Eq(requestedName, challengedName),
+   --[ Eq(cRequestedName, cRespondedName),
        Eq(verify(signature,
-          <token, requestedName>, pkClient), true),
-      ChallengeSucceeded('CA', token, requestedName, authkeyPub)]-> // Record success.
+          <kToken, cRequestedName>, kPkClient), true),
+      ChallengeSucceeded('CA', kToken, cRequestedName, cAuthkeyPub)]-> // Record success.
    []
 
 include(common-rules.m4i)
