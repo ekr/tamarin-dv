@@ -78,7 +78,7 @@ rule Client_RespondToChallenge:
    --[ Eq(challengeName, clientName),
        Eq(authkeyPub, challengeAuthkey),
        Eq(verify(signature, challengeMessage, pkCA), true),
-       ReceivedChallenge(ca, token, clientName, authkeyPub) ]->
+       ReceivedChallenge(caName, token, clientName, authkeyPub) ]->
      [ Out( <                                       // Emit a "signed" challenge.
              clientName,
              sign{<token, clientName>}ltkClient
@@ -87,14 +87,14 @@ rule Client_RespondToChallenge:
 
 /* Have the CA process the response. */
 rule CA_HandleChallengeResponse:
-   [ StoredToken(challenge, name, authkey),
-     In (<claimed_name, signature>),                // Read the signed challenge.
-     !Pk(name, pkClient)                                 // Recover the domain key.
+   [ StoredToken(token, challengedName, authkeyPub),
+     In (<requestedName, signature>),                // Read the signed challenge.
+     !Pk(challengedName, pkClient)                                 // Recover the domain key.
    ]
-   --[ Eq(claimed_name, name),
+   --[ Eq(requestedName, challengedName),
        Eq(verify(signature,
-          <challenge, name>, pkClient), true),
-      ChallengeSucceeded('CA', challenge, name, authkey)]-> // Record success.
+          <token, requestedName>, pkClient), true),
+      ChallengeSucceeded('CA', token, requestedName, authkeyPub)]-> // Record success.
    []
 
 include(common-rules.m4i)
