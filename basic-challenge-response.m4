@@ -23,42 +23,49 @@ begin
 builtins: hashing, symmetric-encryption, asymmetric-encryption, signing
 functions: h/1, pk/1
 
+/* Conventions:
+
+   kFoo means that Foo is something we actually know
+   cFoo means that Foo is something that is claimed. 
+*/
+
 /* Issue the signing key for the CA */
 rule CA_Setup:
-   [ !Ltk('CA', ~ltkCA) ]
+   [ !Ltk('CA', ~vLtkCA) ]
    -->
    []
 
 /* Issue a request for a given name ($Client) */
 rule Client_RequestIssuance:
-   [ !Ltk($Client, ~ltkClient),                   // Generate the key pair we will use to authenticate (as above).
-     Fr(~authkeyPriv)
+   [ !Ltk($Client, kvLtkClient),                   // Generate the key pair we will use to authenticate (as above).
+     Fr(~kAuthkeyPriv)
    ]                     // Generate a fresh authkey
-   --[ClientRequested('CA', $Client, pk(~authkeyPriv))]->  // Record that we made the request
-   [ StoredRequest('CA', $Client, pk(~authkeyPriv)),       // Store the (name, state) binding locally
-     RequestIssuance($Client, pk(~authkeyPriv)) ]    // Output (name, state) so that it can be consumed by the CA
+   --[ClientRequested('CA', $Client, pk(~kAuthkeyPriv))]->  // Record that we made the request
+   [ StoredRequest('CA', $Client, pk(~kAuthkeyPriv)),       // Store the (name, state) binding locally
+     RequestIssuance($Client, pk(~kAuthkeyPriv)) ]    // Output (name, state) so that it can be consumed by the CA
 
 
 /* Allow the attacker to request issuance */
 rule Attacker_RequestIssuance:
-   [ Fr(~authkey) ]
-   --[Attacker_RequestIssuance(~authkey)]->
-   [ RequestIssuance($Client, ~authkey) ]
+   [ Fr(~kAuthkeyPriv) ]
+   --[Attacker_RequestIssuance(pk(~kAuthkeyPriv))]->
+   [ RequestIssuance($Client, pk(~kAuthkeyPriv)) ]
+
 
 /* Have the CA handle the request for issuance */
 rule CA_HandleIssuanceRequest:
    let
-        challengeMessage = <clientName, ~token, authkey>
+        challengeMessage = <cClientName, ~kToken, cAuthkeyPub>
    in
      
-   [ RequestIssuance(clientName, authkey),     // Take in a the request for issuance.
-     Fr(~token),                         // Generate a fresh token to use as a challenge
-     !Ltk('CA', ltkCA)]
-  --[ IssuedChallenge(~token, clientName, authkey) ]->  // Record that we issued the challenge
-    [ StoredToken(~token, clientName, authkey),// Store the challenge we issued.
+   [ RequestIssuance(cClientName, cAuthkeyPub),     // Take in a the request for issuance.
+     Fr(~kToken),                                 // Generate a fresh token to use as a challenge
+     !Ltk('CA', kLtkCA)]
+  --[ IssuedChallenge(~kToken, cClientName, cAuthkeyPub) ]->  // Record that we issued the challenge
+    [ StoredToken(~kToken, cClientName, cAuthkeyPub),// Store the challenge we issued.
      Out(<
          challengeMessage,
-         sign { challengeMessage } ltkCA
+         sign { challengeMessage } kLtkCA
          >
      )
    ]
@@ -66,22 +73,22 @@ rule CA_HandleIssuanceRequest:
 /* Have the client respond to the challenge. */
 rule Client_RespondToChallenge:
    let
-        challengeMessage = <challengeName, token, challengeAuthkey>
+        challengeMessage = <cClientName, cToken, cAuthkeyPub>
    in
 
    [ 
-     StoredRequest(caName, clientName, authkeyPub),
+     StoredRequest(kCaName, kClientName, kAuthkeyPub),
      In(<challengeMessage, signature>),
-     !Pk(caName, pkCA),
-     !Ltk($Client, ltkClient)
+     !Pk(kCaName, kPkCA),
+     !Ltk($Client, kLtkClient)
    ] 
-   --[ Eq(challengeName, clientName),
-       Eq(authkeyPub, challengeAuthkey),
-       Eq(verify(signature, challengeMessage, pkCA), true),
-       ReceivedChallenge(caName, token, clientName, authkeyPub) ]->
+   --[ Eq(cClientName, kClientName),
+       Eq(cAuthkeyPub, kAuthkeyPub),
+       Eq(verify(signature, challengeMessage, kPkCA), true),
+       ReceivedChallenge(kCaName, cToken, kClientName, kAuthkeyPub) ]->
      [ Out( <                                       // Emit a "signed" challenge.
-             clientName,
-             sign{<token, clientName>}ltkClient
+             kClientName,
+             sign{<cToken, kClientName>}kLtkClient
             >)
      ]
 
