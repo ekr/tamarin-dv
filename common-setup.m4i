@@ -1,0 +1,40 @@
+/* Issue the signing key for the CA */
+rule CA_Setup:
+   [ !Ltk('CA', ~vLtkCA) ]
+   -->
+   []
+
+/* Issue a request for a given name ($Client) */
+rule Client_RequestIssuance:
+   [ !Ltk($Client, kvLtkClient),                   // Generate the key pair we will use to authenticate (as above).
+     Fr(~kAuthkeyPriv)
+   ]                     // Generate a fresh authkey
+   --[AClient_RequestedIssuance('CA', $Client, pk(~kAuthkeyPriv))]->  // Record that we made the request
+   [ StoredRequest('CA', $Client, pk(~kAuthkeyPriv)),       // Store the (name, state) binding locally
+     RequestIssuance($Client, pk(~kAuthkeyPriv)) ]    // Output (name, state) so that it can be consumed by the CA
+
+
+/* Allow the attacker to request issuance */
+rule Attacker_RequestIssuance:
+   [ Fr(~kAuthkeyPriv) ]
+   --[AAttacker_RequestedIssuance(pk(~kAuthkeyPriv))]->
+   [ RequestIssuance($Client, pk(~kAuthkeyPriv)) ]
+
+
+/* Have the CA handle the request for issuance */
+rule CA_HandleIssuanceRequest:
+   let
+        challengeMessage = <cClientName, ~kToken, cAuthkeyPub>
+   in
+     
+   [ RequestIssuance(cClientName, cAuthkeyPub),     // Take in a the request for issuance.
+     Fr(~kToken),                                 // Generate a fresh token to use as a challenge
+     !Ltk('CA', kLtkCA)]
+  --[ ACA_IssuedChallenge(~kToken, cClientName, cAuthkeyPub) ]->  // Record that we issued the challenge
+    [ StoredToken(~kToken, cClientName, cAuthkeyPub),// Store the challenge we issued.
+     Out(<
+         challengeMessage,
+         sign { challengeMessage } kLtkCA
+         >
+     )
+   ]
