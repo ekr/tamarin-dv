@@ -23,6 +23,7 @@ begin
 builtins: hashing, symmetric-encryption, asymmetric-encryption, signing
 functions: h/1, pk/1
 
+/* Issue the signing key for the CA */
 rule CA_Setup:
    [ !Ltk('CA', ~ltkCA) ]
    -->
@@ -44,8 +45,6 @@ rule Attacker_RequestIssuance:
    [ RequestIssuance($A, ~authkey) ]
 
 /* Have the CA handle the request for issuance */
-
-
 rule CA_HandleIssuanceRequest:
    let
         challengemessage = <name, ~token, authkey>
