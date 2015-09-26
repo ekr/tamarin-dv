@@ -4,7 +4,7 @@
     The basic model here is as follows:
 
     Client                                      CA (CA)
->    name  ------------------------------------------------>   [Client_RequestIssuance]
+    name  ------------------------------------------------>   [Client_RequestIssuance]
     <------------------------------------------ token, name   [CA_HandleIssuanceRequest]
     sign(token, name) ------------------------------------>   [Client_RespondToChallenge]
                                                               [CA_HandleChallengeResponse]
@@ -29,35 +29,36 @@ rule CA_Setup:
    -->
    []
 
-/* Issue a request for a given name ($A) */
+/* Issue a request for a given name ($Client) */
 rule Client_RequestIssuance:
-   [ !Ltk($A, ~ltkA),                   // Generate the key pair we will use to authenticate (as above).
+   [ !Ltk($Client, ~ltkClient),                   // Generate the key pair we will use to authenticate (as above).
      Fr(~authkeyPriv)
    ]                     // Generate a fresh authkey
-   --[ClientRequested('CA', $A, pk(~authkeyPriv))]->  // Record that we made the request
-   [ StoredRequest('CA', $A, pk(~authkeyPriv)),       // Store the (name, state) binding locally
-     RequestIssuance($A, pk(~authkeyPriv)) ]    // Output (name, state) so that it can be consumed by the CA
+   --[ClientRequested('CA', $Client, pk(~authkeyPriv))]->  // Record that we made the request
+   [ StoredRequest('CA', $Client, pk(~authkeyPriv)),       // Store the (name, state) binding locally
+     RequestIssuance($Client, pk(~authkeyPriv)) ]    // Output (name, state) so that it can be consumed by the CA
+
 
 /* Allow the attacker to request issuance */
 rule Attacker_RequestIssuance:
    [ Fr(~authkey) ]
    --[Attacker_RequestIssuance(~authkey)]->
-   [ RequestIssuance($A, ~authkey) ]
+   [ RequestIssuance($Client, ~authkey) ]
 
 /* Have the CA handle the request for issuance */
 rule CA_HandleIssuanceRequest:
    let
-        challengemessage = <name, ~token, authkey>
+        challengeMessage = <clientName, ~token, authkey>
    in
      
-   [ RequestIssuance(name, authkey),     // Take in a the request for issuance.
+   [ RequestIssuance(clientName, authkey),     // Take in a the request for issuance.
      Fr(~token),                         // Generate a fresh token to use as a challenge
      !Ltk('CA', ltkCA)]
-  --[ IssuedChallenge(~token, name, authkey) ]->  // Record that we issued the challenge
-    [ StoredToken(~token, name, authkey),// Store the challenge we issued.
+  --[ IssuedChallenge(~token, clientName, authkey) ]->  // Record that we issued the challenge
+    [ StoredToken(~token, clientName, authkey),// Store the challenge we issued.
      Out(<
-         challengemessage,
-         sign { challengemessage } ltkCA
+         challengeMessage,
+         sign { challengeMessage } ltkCA
          >
      )
    ]
@@ -65,22 +66,22 @@ rule CA_HandleIssuanceRequest:
 /* Have the client respond to the challenge. */
 rule Client_RespondToChallenge:
    let
-        challengemessage = <name, token, authkey>
+        challengeMessage = <challengeName, token, challengeAuthkey>
    in
 
    [ 
-     StoredRequest(ca, expectedname, authkeyPub),
-     In(<challengemessage, signature>),
-     !Pk(ca, pkCA),
-     !Ltk($A, ltkA)
+     StoredRequest(caName, clientName, authkeyPub),
+     In(<challengeMessage, signature>),
+     !Pk(caName, pkCA),
+     !Ltk($Client, ltkClient)
    ] 
-   --[ Eq(expectedname, name),
-       Eq(authkeyPub, authkey),
-       Eq(verify(signature, challengemessage, pkCA), true),
-       ReceivedChallenge(ca, token, name, authkeyPub) ]->
+   --[ Eq(challengeName, clientName),
+       Eq(authkeyPub, challengeAuthkey),
+       Eq(verify(signature, challengeMessage, pkCA), true),
+       ReceivedChallenge(ca, token, clientName, authkeyPub) ]->
      [ Out( <                                       // Emit a "signed" challenge.
-             name,
-             sign{<token, name>}ltkA
+             clientName,
+             sign{<token, clientName>}ltkClient
             >)
      ]
 
@@ -88,11 +89,11 @@ rule Client_RespondToChallenge:
 rule CA_HandleChallengeResponse:
    [ StoredToken(challenge, name, authkey),
      In (<claimed_name, signature>),                // Read the signed challenge.
-     !Pk(name, pkA)                                 // Recover the domain key.
+     !Pk(name, pkClient)                                 // Recover the domain key.
    ]
    --[ Eq(claimed_name, name),
        Eq(verify(signature,
-          <challenge, name>, pkA), true),
+          <challenge, name>, pkClient), true),
       ChallengeSucceeded('CA', challenge, name, authkey)]-> // Record success.
    []
 
