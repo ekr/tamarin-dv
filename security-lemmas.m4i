@@ -2,10 +2,10 @@
 lemma Honest_trace:
    exists-trace
    " Ex CA C N A #h #i #j #k.
-      ClientRequested(CA, N, A) @ #h &
-      IssuedChallenge(C, N, A) @ #i &
-      ReceivedChallenge(CA, C, N, A) @ #j &
-      ChallengeSucceeded(CA, C, N, A) @ #k &
+      AClient_RequestedIssuance(CA, N, A) @ #h &
+      ACA_IssuedChallenge(C, N, A) @ #i &
+      AClient_FulfilledChallenge(CA, C, N, A) @ #j &
+      ACA_VerifiedChallenge(CA, C, N, A) @ #k &
       #h < #i &
       #i < #j &
       #j < #k
@@ -14,26 +14,26 @@ lemma Honest_trace:
 lemma False_trace:
    exists-trace
    " Ex CA C N A #k.
-      ChallengeSucceeded(CA, C, N, A) @ #k &
+      ACA_VerifiedChallenge(CA, C, N, A) @ #k &
       not (
-        (Ex #h. ClientRequested(CA, N, A) @ #h) &
-        (Ex #i. IssuedChallenge(C, N, A) @ #i) &
-        (Ex #j. ReceivedChallenge(CA, C, N, A) @ #j)
+        (Ex #h. AClient_RequestedIssuance(CA, N, A) @ #h) &
+        (Ex #i. ACA_IssuedChallenge(C, N, A) @ #i) &
+        (Ex #j. AClient_FulfilledChallenge(CA, C, N, A) @ #j)
       )
    "
 
 lemma No_attacker_without_Initiation:
    "All CA C N A #j.
-        ChallengeSucceeded(CA, C, N, A) @j &
-        not (Ex #r. ClientRequested(CA, N, A) @r)
+        ACA_VerifiedChallenge(CA, C, N, A) @j &
+        not (Ex #r. AClient_RequestedIssuance(CA, N, A) @r)
         ==> ((Ex #s. RevLtk(N) @s) |
              (Ex #t. RevLtk(CA) @t))
    "
 
 lemma No_attacker_without_CR:
    "All CA C N A #j.
-        ChallengeSucceeded(CA, C, N, A) @j &
-        not (Ex #r. ReceivedChallenge(CA, C, N, A) @r)
+        ACA_VerifiedChallenge(CA, C, N, A) @j &
+        not (Ex #r. AClient_FulfilledChallenge(CA, C, N, A) @r)
         ==> ((Ex #s. RevLtk(N) @s) |
             (Ex #t. RevLtk(CA) @t))
    "

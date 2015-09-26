@@ -27,6 +27,7 @@ functions: h/1, pk/1
 
    kFoo means that Foo is something we actually know
    cFoo means that Foo is something that is claimed. 
+   AFoo_Bar is an action that Foo did Bar.
 */
 
 /* Issue the signing key for the CA */
@@ -40,7 +41,7 @@ rule Client_RequestIssuance:
    [ !Ltk($Client, kvLtkClient),                   // Generate the key pair we will use to authenticate (as above).
      Fr(~kAuthkeyPriv)
    ]                     // Generate a fresh authkey
-   --[ClientRequested('CA', $Client, pk(~kAuthkeyPriv))]->  // Record that we made the request
+   --[AClient_RequestedIssuance('CA', $Client, pk(~kAuthkeyPriv))]->  // Record that we made the request
    [ StoredRequest('CA', $Client, pk(~kAuthkeyPriv)),       // Store the (name, state) binding locally
      RequestIssuance($Client, pk(~kAuthkeyPriv)) ]    // Output (name, state) so that it can be consumed by the CA
 
@@ -48,7 +49,7 @@ rule Client_RequestIssuance:
 /* Allow the attacker to request issuance */
 rule Attacker_RequestIssuance:
    [ Fr(~kAuthkeyPriv) ]
-   --[Attacker_RequestIssuance(pk(~kAuthkeyPriv))]->
+   --[AAttacker_RequestedIssuance(pk(~kAuthkeyPriv))]->
    [ RequestIssuance($Client, pk(~kAuthkeyPriv)) ]
 
 
@@ -61,7 +62,7 @@ rule CA_HandleIssuanceRequest:
    [ RequestIssuance(cClientName, cAuthkeyPub),     // Take in a the request for issuance.
      Fr(~kToken),                                 // Generate a fresh token to use as a challenge
      !Ltk('CA', kLtkCA)]
-  --[ IssuedChallenge(~kToken, cClientName, cAuthkeyPub) ]->  // Record that we issued the challenge
+  --[ ACA_IssuedChallenge(~kToken, cClientName, cAuthkeyPub) ]->  // Record that we issued the challenge
     [ StoredToken(~kToken, cClientName, cAuthkeyPub),// Store the challenge we issued.
      Out(<
          challengeMessage,
@@ -71,7 +72,7 @@ rule CA_HandleIssuanceRequest:
    ]
 
 /* Have the client respond to the challenge. */
-rule Client_RespondToChallenge:
+rule Client_FulfillChallenge:
    let
         challengeMessage = <cClientName, cToken, cAuthkeyPub>
    in
@@ -85,7 +86,7 @@ rule Client_RespondToChallenge:
    --[ Eq(cClientName, kClientName),
        Eq(cAuthkeyPub, kAuthkeyPub),
        Eq(verify(signature, challengeMessage, kPkCA), true),
-       ReceivedChallenge(kCaName, cToken, kClientName, kAuthkeyPub) ]->
+       AClient_FulfilledChallenge(kCaName, cToken, kClientName, kAuthkeyPub) ]->
      [ Out( <                                       // Emit a "signed" challenge.
              kClientName,
              sign{<cToken, kClientName>}kLtkClient
@@ -102,7 +103,7 @@ rule CA_HandleChallengeResponse:
    --[ Eq(cRequestedName, cRespondedName),
        Eq(verify(signature,
           <kToken, cRequestedName>, kPkClient), true),
-      ChallengeSucceeded('CA', kToken, cRequestedName, cAuthkeyPub)]-> // Record success.
+      ACA_VerifiedChallenge('CA', kToken, cRequestedName, cAuthkeyPub)]-> // Record success.
    []
 
 include(common-rules.m4i)
