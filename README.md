@@ -86,18 +86,26 @@ This directory currently contains two theories:
 
 * basic-challenge-response: a "typical" challenge/response protocol
   where the CA provides a random token and the client just echoes
-  it. [Status: proofs succeed]
+  it. 
 
 * acme1: the SimpleHTTP challenge type from draft-barnes-acme-01.
-  [Status: proofs fail because of the issue raised by Andrew Ayer
-  https://mailarchive.ietf.org/arch/msg/acme/F71iz6qq1o_QPVhJCV4dqWf-4Yc].
-  The rule that tells Tamarin about duplicate signatures is in
-  common-setup.m4i:
+
+
+Note: acme1 has a known issue with duplicate signatures 
+raised by Andrew Ayer (https://mailarchive.ietf.org/arch/msg/acme/F71iz6qq1o_QPVhJCV4dqWf-4Yc).
+If you run acme1.proof, the security proofs will fail due to this issue.
+The equation which tells Tamarin about duplicate signatures is in common-setup.m4i
+and looks like:
+
   ````
-equations:
-    verify(sig, msg, pk(fakekey(sig))) = true
+ifdef(`noduplicatesigs',`',
+`equations:
+    verify(sig, msg, pk(fakekey(sig))) = true')
   ````
-  Removing this rule will make the proofs go through.
+
+As implied by the macro, if you give make the argument FLAGS=-Dnoduplicatesigs, then
+this equation will be omitted and the proofs will succeed.
+
 
   
 
