@@ -60,7 +60,48 @@ key to the server.
 
 # File Structure
 
-This repo contains a variety 
+The repo contains a set of files which are generally common to all the
+protocols:
+
+* common-setup.m4i: the common code to set up the keys, have the
+  client/attacker make the initial request, and the server present
+  the challenge.
+
+* common-rules.m4i: some basic security primitives and rules such
+  as "only one long-term key per actor"
+
+* security-lemmas.m4i: the security properties we would like to
+  prove about the system.
+
+
+The basic protocol theories are written in m4 and use macros to pull
+in these common dependencies. The Makefile does this automatically.
+There is also a Foo.proof target which actually runs the proofs as
+well.
+
+
+# Protocols/Theories
+
+This directory currently contains two theories:
+
+* basic-challenge-response: a "typical" challenge/response protocol
+  where the CA provides a random token and the client just echoes
+  it. [Status: proofs succeed]
+
+* acme1: the SimpleHTTP challenge type from draft-barnes-acme-01.
+  [Status: proofs fail because of the issue raised by Andrew Ayer
+  https://mailarchive.ietf.org/arch/msg/acme/F71iz6qq1o_QPVhJCV4dqWf-4Yc].
+  The rule that tells Tamarin about duplicate signatures is in
+  common-setup.m4i:
+  ````
+equations:
+    verify(sig, msg, pk(fakekey(sig))) = true
+  ````
+  Removing this rule will make the proofs go through.
+  
+
+
+
 
 
 
