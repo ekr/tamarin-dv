@@ -106,11 +106,11 @@ ifdef(`noduplicatesigs',`',
     verify(sig, msg, pk(fakekey(sig))) = true')
   ````
 
-As implied by the macro, if you give make the argument FLAGS=-Dnoduplicatesigs, then
-this equation will be omitted and the proofs will succeed.
+As implied by the macro, if you give make the argument
+FLAGS=-Dnoduplicatesigs, then this equation will be omitted and the
+proofs will succeed. The proofs for basic-challenge-response and acme2
+succeed regardless of whether this flag is set.
 
-
-  
 
 
 
