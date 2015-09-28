@@ -13,4 +13,4 @@ clean:
 	m4 $(FLAGS) -I. $< > $@
 
 %.proof: %.spthy
-	tamarin-prover --prove $<
+	python ./run-tamarin.py $<
