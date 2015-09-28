@@ -57,7 +57,6 @@ Taken together, these provide an approximation of a secure channel. In
 future, I'll probably improve this by having the client send a traffic
 key to the server.
 
-
 # File Structure
 
 The repo contains a set of files which are generally common to all the
@@ -89,7 +88,11 @@ This directory currently contains two theories:
   it. 
 
 * acme1: the SimpleHTTP challenge type from draft-barnes-acme-01.
+  [Note: still needs to be checked to make sure exactly the right
+  things are signed in the challenges.]
 
+* acme2: the proposed new version of SimpleHTTP from
+  https://github.com/ietf-wg-acme/acme/pull/6
 
 Note: acme1 has a known issue with duplicate signatures 
 raised by Andrew Ayer (https://mailarchive.ietf.org/arch/msg/acme/F71iz6qq1o_QPVhJCV4dqWf-4Yc).
