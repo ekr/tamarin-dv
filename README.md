@@ -98,6 +98,7 @@ equations:
     verify(sig, msg, pk(fakekey(sig))) = true
   ````
   Removing this rule will make the proofs go through.
+
   
 
 

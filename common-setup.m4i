@@ -1,7 +1,9 @@
 builtins: hashing, symmetric-encryption, asymmetric-encryption, signing
 functions: h/1, pk/1, fakekey/1
-equations:
-    verify(sig, msg, pk(fakekey(sig))) = true
+
+ifdef(`noduplicatesigs',`',
+`equations:
+    verify(sig, msg, pk(fakekey(sig))) = true')
 
 /* Issue the signing key for the CA */
 rule CA_Setup:
