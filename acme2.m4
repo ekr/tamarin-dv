@@ -1,10 +1,10 @@
 /*
-    ACME version 1.
+    ACME version 2:
 
-    See draft-barnes-acme-01.
+    See https://github.com/ietf-wg-acme/acme/pull/6
 
 */
-theory AcmeV1
+theory AcmeV2
 begin
 
 include(common-setup.m4i)
@@ -13,7 +13,7 @@ include(common-setup.m4i)
 rule Client_FulfillChallenge:
    let
         challengeMessage = <cClientName, cToken, cAuthkeyPub>
-        signedChallenge = sign{<cToken, kClientName>} kAuthkeyPriv
+        responseMessage = <'Response', cClientName, cToken, cAuthkeyPub>
    in
 
    [ 
@@ -28,13 +28,13 @@ rule Client_FulfillChallenge:
        AClient_FulfilledChallenge(kCaName, cToken, kClientName, pk(kAuthkeyPriv)) ]->
      [ Out( <                                       
              kClientName,                           
-             signedChallenge,                       // A challenge signed by the account key
+             sign {responseMessage} kAuthkeyPriv,   // The challenge signed by the account key
                                                     // This is what the client supplies in
                                                     // the "responses" message. This is
                                                     // delivered over an insecure channel.
 
-             sign {signedChallenge} kLtkClient      // A signature over the signedChallenge
-                                                    // by the long-term client key.
+             sign {responseMessage} kLtkClient      // The challenge signed by the long-eerm
+                                                    // client key.
                                                     // This emulates a "secure" authorization
                                                     // check.
             >)
@@ -42,6 +42,10 @@ rule Client_FulfillChallenge:
 
 /* Have the CA process the response. */
 rule CA_HandleChallengeResponse:
+   let
+       responseMessage = <'Response', cRequestedName, kToken, cAuthkeyPub>
+   in
+
    [ StoredToken(kToken, cRequestedName, cAuthkeyPub),  // These are marked as 'c' because haven't
                                                         // verified them.
      In (<cRespondedName, authKeySignature, authenticatedSignature>),  // Read the signed challenge.
@@ -50,12 +54,11 @@ rule CA_HandleChallengeResponse:
    --[ Eq(cRequestedName, cRespondedName),
 
        // Check the signature in the client's "response".
-       Eq(verify(authKeySignature,
-          <kToken, cRequestedName>, cAuthkeyPub), true),
+       Eq(verify(authKeySignature, responseMessage, cAuthkeyPub), true),
 
        // Validate the client's fulfillment of the challenge, by
        // sending the signed response via the secure channel.
-       Eq(verify(authenticatedSignature, authKeySignature, kPkClient), true),
+       Eq(verify(authenticatedSignature, responseMessage, kPkClient), true),
        ACA_VerifiedChallenge('CA', kToken, cRequestedName, cAuthkeyPub)]-> // Record success.
    []
 
