@@ -1,6 +1,6 @@
-# Tamarin DV Certificate Model
+# WIP Tamarin DV Certificate Model
 
-This repo contains Tamarin (https://github.com/tamarin-prover/tamarin-prover)
+This repo contains WIP Tamarin (https://github.com/tamarin-prover/tamarin-prover)
 models for a variety of Domain Validated (DV) certificate authorization
 protocols. 
 
