@@ -7,6 +7,7 @@ lemma Honest_trace:
       AClient_FulfilledChallenge(CA, C, N, A) @ #j &
       ACA_VerifiedChallenge(CA, C, N, A) @ #k &
       not (Ex #r. RevLtk(N) @ #r) &
+      not (Ex #s. RevLtk(CA) @ #s) &
       #h < #i &
       #i < #j &
       #j < #k
@@ -27,12 +28,14 @@ lemma No_attacker_without_Initiation:
    "All CA C N A #j.
         ACA_VerifiedChallenge(CA, C, N, A) @j &
         not (Ex #r. AClient_RequestedIssuance(CA, N, A) @r)
-        ==> (Ex #s. RevLtk(N) @s)
+        ==> ((Ex #s. RevLtk(N) @s) |
+             (Ex #t. RevLtk(CA) @t))
    "
 
 lemma No_attacker_without_CR:
    "All CA C N A #j.
         ACA_VerifiedChallenge(CA, C, N, A) @j &
         not (Ex #r. AClient_FulfilledChallenge(CA, C, N, A) @r)
-        ==> (Ex #s. RevLtk(N) @s)
+        ==> ((Ex #s. RevLtk(N) @s) |
+            (Ex #t. RevLtk(CA) @t))
    "
